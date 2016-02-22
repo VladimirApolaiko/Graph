@@ -1,14 +1,12 @@
 package sample;
 
-import com.sun.org.apache.xerces.internal.impl.xpath.regex.Match;
 import javafx.fxml.FXML;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.control.Button;
 import javafx.scene.image.PixelWriter;
-import javafx.scene.paint.*;
+import javafx.scene.input.MouseButton;
 import javafx.scene.paint.Color;
 
-import java.awt.*;
 import java.util.Deque;
 import java.util.LinkedList;
 
@@ -29,6 +27,9 @@ public class Controller {
 
     @FXML
     private Button pencilButton;
+
+    @FXML
+    private Button fillButton;
 
     private Deque<Double> buffer = new LinkedList<>();
 
@@ -51,8 +52,8 @@ public class Controller {
         });
 
         canvas.setOnMouseClicked(event -> {
-            switch(selectedTool){
-                case LINE :{
+            switch (selectedTool) {
+                case LINE: {
                     if (buffer.size() == 0) {
                         buffer.add(event.getY());
                         buffer.add(event.getX());
@@ -60,25 +61,27 @@ public class Controller {
                         drawLine(buffer.removeLast().intValue(), buffer.removeLast().intValue(), (int) event.getX(), (int) event.getY());
                         selectedTool = -1;
                     }
-                }break;
+                }
+                break;
 
-                case CIRCLE : {
+                case CIRCLE: {
                     if (buffer.size() == 0) {
                         buffer.add(event.getY());
                         buffer.add(event.getX());
-                    }else{
+                    } else {
                         int centerX = buffer.removeLast().intValue();
                         drawCircle(centerX, buffer.removeLast().intValue(), (int) Math.abs(centerX - event.getX()));
+                        selectedTool = -1;
                     }
-                }break;
+                }
+                break;
             }
-
-
         });
 
-        canvas.setOnMouseMoved(event -> {
-            switch(selectedTool){
-                case PENCIL :{
+        canvas.setOnMouseDragged(event -> {
+            switch (selectedTool) {
+                case PENCIL: {
+                    if (!event.getButton().equals(MouseButton.PRIMARY)) return;
                     if (buffer.size() == 0) {
                         buffer.add(event.getY());
                         buffer.add(event.getX());
@@ -137,7 +140,7 @@ public class Controller {
         int x = 0;
         int y = r;
         int error = 0;
-        int delta = (2- 2 * r);
+        int delta = (2 - 2 * r);
 
         while (y >= 0) {
             pixelWriter.setColor(x1 + x, y1 + y, Color.BLACK);
@@ -153,14 +156,14 @@ public class Controller {
                 continue;
             }
 
-            if(delta > 0 && error > 0){
+            if (delta > 0 && error > 0) {
                 y--;
                 delta -= 2 * y + 1;
                 continue;
             }
 
             x++;
-            delta += 2  * (x - y);
+            delta += 2 * (x - y);
             y--;
         }
     }
