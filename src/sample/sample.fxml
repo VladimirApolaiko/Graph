@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.canvas.*?>
+<?import javafx.scene.control.*?>
+<?import java.lang.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+
+<Pane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="768.0" prefWidth="1024.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="sample.Controller">
+   <children>
+      <ScrollPane hbarPolicy="NEVER" layoutX="-1.0" prefHeight="768.0" prefWidth="80.0">
+        <content>
+          <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="766.0" prefWidth="77.0">
+               <children>
+                  <Button fx:id="lineButton" layoutX="20.0" layoutY="14.0" mnemonicParsing="false" text="Line" />
+                  <Button fx:id="circleButton" layoutX="16.0" layoutY="54.0" mnemonicParsing="false" text="Circle" />
+                  <Button fx:id="pencilButton" layoutX="13.0" layoutY="98.0" mnemonicParsing="false" text="Pencil" />
+               </children>
+            </AnchorPane>
+        </content>
+      </ScrollPane>
+      <Canvas fx:id="canvas" height="768.0" layoutX="79.0" width="944.0" />
+   </children>
+</Pane>
