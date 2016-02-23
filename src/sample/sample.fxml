@@ -20,6 +20,7 @@
                   <Button fx:id="circleButton" layoutX="16.0" layoutY="54.0" mnemonicParsing="false" text="Circle" />
                   <Button fx:id="pencilButton" layoutX="15.0" layoutY="92.0" mnemonicParsing="false" text="Pencil" />
                   <Button fx:id="fillButton" layoutX="23.0" layoutY="130.0" mnemonicParsing="false" text="FIll" />
+                  <Button fx:id="bezeButton" layoutX="19.0" layoutY="165.0" mnemonicParsing="false" text="Beze" />
                </children>
             </AnchorPane>
         </content>

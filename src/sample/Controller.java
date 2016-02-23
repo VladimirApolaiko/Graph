@@ -15,6 +15,7 @@ public class Controller {
     private static final int LINE = 0;
     private static final int CIRCLE = 1;
     private static final int PENCIL = 2;
+    private static final int BEZE = 3;
 
     @FXML
     private Canvas canvas;
@@ -30,6 +31,9 @@ public class Controller {
 
     @FXML
     private Button fillButton;
+
+    @FXML
+    private Button bezeButton;
 
     private Deque<Double> buffer = new LinkedList<>();
 
@@ -75,6 +79,21 @@ public class Controller {
                     }
                 }
                 break;
+
+                case BEZE: {
+                    if (buffer.size() < 6) {
+                        buffer.add(event.getY());
+                        buffer.add(event.getX());
+                        if(buffer.size() == 6){
+                            drawBeze(buffer.removeLast().intValue(),
+                                    buffer.removeLast().intValue(),
+                                    buffer.removeLast().intValue(),
+                                    buffer.removeLast().intValue(),
+                                    buffer.removeLast().intValue(),
+                                    buffer.removeLast().intValue());
+                        }
+                    }
+                }
             }
         });
 
@@ -92,9 +111,24 @@ public class Controller {
             }
         });
 
+        bezeButton.setOnMouseClicked(event -> {
+            selectedTool = BEZE;
+        });
+
 
         pixelWriter = canvas.getGraphicsContext2D().getPixelWriter();
     }
+
+    private void drawBeze(int x1, int y1, int x2, int y2, int x3, int y3) {
+        for (double t = 0.0; t <= 1; t += 0.0001) {
+            pixelWriter.setColor(countCord(x1,x2,x3,t), countCord(y1, y2, y3, t), Color.BLACK);
+        }
+    }
+
+    private int countCord(int value1, int value2, int value3, double t) {
+        return (int) Math.round(Math.pow(1 - t, 2) * value1 + 2 * (1 - t) * t * value2 + Math.pow(t, 2) * value3);
+    }
+
 
     private void drawLine(int x1, int y1, int x2, int y2) {
         double lengthX = Math.abs(x2 - x1);
