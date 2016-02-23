@@ -1,9 +1,12 @@
 package sample;
 
 import javafx.fxml.FXML;
+import javafx.scene.SnapshotParameters;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.control.Button;
+import javafx.scene.image.ImageView;
 import javafx.scene.image.PixelWriter;
+import javafx.scene.image.WritableImage;
 import javafx.scene.input.MouseButton;
 import javafx.scene.paint.Color;
 
@@ -16,6 +19,7 @@ public class Controller {
     private static final int CIRCLE = 1;
     private static final int PENCIL = 2;
     private static final int BEZE = 3;
+    private static final int FLOOD_FILL = 4;
 
     @FXML
     private Canvas canvas;
@@ -43,17 +47,17 @@ public class Controller {
 
     @FXML
     private void initialize() {
-        lineButton.setOnAction(event -> {
-            selectedTool = LINE;
-        });
 
-        circleButton.setOnAction(event -> {
-            selectedTool = CIRCLE;
-        });
+        /*Canvas initialize*/
+        pixelWriter = canvas.getGraphicsContext2D().getPixelWriter();
 
-        pencilButton.setOnAction(event -> {
-            selectedTool = PENCIL;
-        });
+        lineButton.setOnAction(event -> selectedTool = LINE);
+
+        circleButton.setOnAction(event -> selectedTool = CIRCLE);
+
+        pencilButton.setOnAction(event -> selectedTool = PENCIL);
+
+        fillButton.setOnAction(event -> selectedTool = FLOOD_FILL);
 
         canvas.setOnMouseClicked(event -> {
             switch (selectedTool) {
@@ -84,15 +88,22 @@ public class Controller {
                     if (buffer.size() < 6) {
                         buffer.add(event.getY());
                         buffer.add(event.getX());
-                        if(buffer.size() == 6){
-                            drawBeze(buffer.removeLast().intValue(),
-                                    buffer.removeLast().intValue(),
-                                    buffer.removeLast().intValue(),
-                                    buffer.removeLast().intValue(),
-                                    buffer.removeLast().intValue(),
-                                    buffer.removeLast().intValue());
-                        }
                     }
+                    if (buffer.size() == 6) {
+                        drawBeze(buffer.removeLast().intValue(),
+                                buffer.removeLast().intValue(),
+                                buffer.removeLast().intValue(),
+                                buffer.removeLast().intValue(),
+                                buffer.removeLast().intValue(),
+                                buffer.removeLast().intValue());
+                        selectedTool = -1;
+                    }
+                }
+                break;
+
+                case FLOOD_FILL: {
+                    floodFill4((int) event.getX(), (int) event.getY(), Color.GREEN, Color.BLACK, writableImage);
+                    selectedTool = -1;
                 }
             }
         });
@@ -115,8 +126,6 @@ public class Controller {
             selectedTool = BEZE;
         });
 
-
-        pixelWriter = canvas.getGraphicsContext2D().getPixelWriter();
     }
 
     private void drawBeze(int x1, int y1, int x2, int y2, int x3, int y3) {
@@ -173,7 +182,7 @@ public class Controller {
     private void drawCircle(int x1, int y1, int r) {
         int x = 0;
         int y = r;
-        int error = 0;
+        int error;
         int delta = (2 - 2 * r);
 
         while (y >= 0) {
@@ -201,4 +210,17 @@ public class Controller {
             y--;
         }
     }
+
+    private void floodFill4(int x, int y, Color newColor, Color oldColor, WritableImage writableImage){
+        if(x >= 0 && x < canvas.getWidth() && y >= 0 && y < canvas.getHeight() &&  !writableImage.getPixelReader().getColor(x,y).equals(oldColor) && !writableImage.getPixelReader().getColor(x, y).equals(newColor))
+        {
+            pixelWriter.setColor(x, y, newColor); //set color before starting recursion
+
+            floodFill4(x + 1, y    , newColor, oldColor, writableImage);
+            floodFill4(x - 1, y    , newColor, oldColor, writableImage);
+            floodFill4(x    , y + 1, newColor, oldColor, writableImage);
+            floodFill4(x    , y - 1, newColor, oldColor, writableImage);
+        }
+    }
+
 }
