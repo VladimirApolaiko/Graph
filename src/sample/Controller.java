@@ -1,17 +1,22 @@
 package sample;
 
 import javafx.fxml.FXML;
+import javafx.scene.Scene;
 import javafx.scene.SnapshotParameters;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.control.Button;
-import javafx.scene.image.ImageView;
-import javafx.scene.image.PixelWriter;
-import javafx.scene.image.WritableImage;
+import javafx.scene.control.ColorPicker;
+import javafx.scene.control.Label;
+import javafx.scene.image.*;
 import javafx.scene.input.MouseButton;
 import javafx.scene.paint.Color;
 
 import java.util.Deque;
 import java.util.LinkedList;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 public class Controller {
 
@@ -20,6 +25,13 @@ public class Controller {
     private static final int PENCIL = 2;
     private static final int BEZE = 3;
     private static final int FLOOD_FILL = 4;
+
+    private static final int MAX_WIDTH = 1024;
+    private static final int MAX_HEIGHT = 768;
+
+    private static final String OUT_OF_BOUNDS = "Out of screen bounds";
+
+    private static final ScheduledExecutorService pool = Executors.newScheduledThreadPool(1);
 
     @FXML
     private Canvas canvas;
@@ -39,17 +51,30 @@ public class Controller {
     @FXML
     private Button bezeButton;
 
+    @FXML
+    private Label errorMessage;
+
+    @FXML
+    private ColorPicker borderColorPicker;
+
+    @FXML
+    private ColorPicker backgroundColorPicker;
+
     private Deque<Double> buffer = new LinkedList<>();
 
     private PixelWriter pixelWriter;
+
+    private PixelReader pixelReader;
 
     private int selectedTool;
 
     @FXML
     private void initialize() {
-
         /*Canvas initialize*/
-        pixelWriter = canvas.getGraphicsContext2D().getPixelWriter();
+        WritableImage image = new WritableImage(MAX_WIDTH, MAX_HEIGHT);
+        pixelWriter = image.getPixelWriter();
+        pixelReader = image.getPixelReader();
+
 
         lineButton.setOnAction(event -> selectedTool = LINE);
 
@@ -67,6 +92,7 @@ public class Controller {
                         buffer.add(event.getX());
                     } else {
                         drawLine(buffer.removeLast().intValue(), buffer.removeLast().intValue(), (int) event.getX(), (int) event.getY());
+                        applyChanges(image);
                         selectedTool = -1;
                     }
                 }
@@ -78,7 +104,12 @@ public class Controller {
                         buffer.add(event.getX());
                     } else {
                         int centerX = buffer.removeLast().intValue();
-                        drawCircle(centerX, buffer.removeLast().intValue(), (int) Math.abs(centerX - event.getX()));
+                        int centerY = buffer.removeLast().intValue();
+                        double deltaX = Math.abs(centerX - event.getX());
+                        double deltaY = Math.abs(centerY - event.getY());
+                        int radius = (int) Math.round(Math.sqrt(Math.pow(deltaX, 2) + Math.pow(deltaY, 2)));
+                        drawCircle(centerX, centerY, radius);
+                        applyChanges(image);
                         selectedTool = -1;
                     }
                 }
@@ -96,13 +127,15 @@ public class Controller {
                                 buffer.removeLast().intValue(),
                                 buffer.removeLast().intValue(),
                                 buffer.removeLast().intValue());
+                        applyChanges(image);
                         selectedTool = -1;
                     }
                 }
                 break;
 
                 case FLOOD_FILL: {
-                    floodFill4((int) event.getX(), (int) event.getY(), Color.GREEN, Color.BLACK, writableImage);
+                    floodFill4((int) event.getX(), (int) event.getY(), backgroundColorPicker.getValue(), borderColorPicker.getValue());
+                    applyChanges(image);
                     selectedTool = -1;
                 }
             }
@@ -117,7 +150,18 @@ public class Controller {
                         buffer.add(event.getX());
                     } else {
                         drawLine(buffer.removeLast().intValue(), buffer.removeLast().intValue(), (int) event.getX(), (int) event.getY());
+                        buffer.add(event.getY());
+                        buffer.add(event.getX());
+                        applyChanges(image);
                     }
+                }
+            }
+        });
+
+        canvas.setOnMouseReleased(event -> {
+            switch (selectedTool) {
+                case PENCIL: {
+                    buffer.clear();
                 }
             }
         });
@@ -128,16 +172,20 @@ public class Controller {
 
     }
 
+    private void showMessage(String message) {
+        errorMessage.setText(message);
+        pool.schedule(() -> errorMessage.setText(""), 3, TimeUnit.SECONDS);
+    }
+
     private void drawBeze(int x1, int y1, int x2, int y2, int x3, int y3) {
         for (double t = 0.0; t <= 1; t += 0.0001) {
-            pixelWriter.setColor(countCord(x1,x2,x3,t), countCord(y1, y2, y3, t), Color.BLACK);
+            drawPixel(countCord(x1, x2, x3, t), countCord(y1, y2, y3, t), borderColorPicker.getValue());
         }
     }
 
     private int countCord(int value1, int value2, int value3, double t) {
         return (int) Math.round(Math.pow(1 - t, 2) * value1 + 2 * (1 - t) * t * value2 + Math.pow(t, 2) * value3);
     }
-
 
     private void drawLine(int x1, int y1, int x2, int y2) {
         double lengthX = Math.abs(x2 - x1);
@@ -149,7 +197,7 @@ public class Controller {
         double length = Math.max(lengthX, lengthY);
 
         if (length == 0) {
-            pixelWriter.setColor(x1, y1, Color.BLACK);
+            drawPixel(x1, y1, borderColorPicker.getValue());
         }
 
         if (lengthY <= lengthX) {
@@ -160,7 +208,7 @@ public class Controller {
 
             while (length != 0) {
                 length--;
-                pixelWriter.setColor(x, (int) Math.round(y), Color.BLACK);
+                drawPixel(x, (int) Math.round(y), borderColorPicker.getValue());
                 x += signX;
                 y += signY * lengthY / lengthX;
             }
@@ -172,7 +220,7 @@ public class Controller {
 
             while (length != 0) {
                 length--;
-                pixelWriter.setColor((int) Math.round(x), y, Color.BLACK);
+                drawPixel((int) Math.round(x), y, borderColorPicker.getValue());
                 y += signY;
                 x += signX * lengthX / lengthY;
             }
@@ -186,10 +234,10 @@ public class Controller {
         int delta = (2 - 2 * r);
 
         while (y >= 0) {
-            pixelWriter.setColor(x1 + x, y1 + y, Color.BLACK);
-            pixelWriter.setColor(x1 + x, y1 - y, Color.BLACK);
-            pixelWriter.setColor(x1 - x, y1 + y, Color.BLACK);
-            pixelWriter.setColor(x1 - x, y1 - y, Color.BLACK);
+            drawPixel(x1 + x, y1 + y, borderColorPicker.getValue());
+            drawPixel(x1 + x, y1 - y, borderColorPicker.getValue());
+            drawPixel(x1 - x, y1 + y, borderColorPicker.getValue());
+            drawPixel(x1 - x, y1 - y, borderColorPicker.getValue());
 
             error = 2 * (delta + y) - 1;
 
@@ -211,16 +259,25 @@ public class Controller {
         }
     }
 
-    private void floodFill4(int x, int y, Color newColor, Color oldColor, WritableImage writableImage){
-        if(x >= 0 && x < canvas.getWidth() && y >= 0 && y < canvas.getHeight() &&  !writableImage.getPixelReader().getColor(x,y).equals(oldColor) && !writableImage.getPixelReader().getColor(x, y).equals(newColor))
-        {
-            pixelWriter.setColor(x, y, newColor); //set color before starting recursion
+    private void floodFill4(int x, int y, Color backgroundColor, Color borderColor) {
+        if (x >= 0 && x < canvas.getWidth() && y >= 0 && y < canvas.getHeight() && !pixelReader.getColor(x, y).equals(backgroundColor) && !pixelReader.getColor(x, y).equals(borderColor)) {
+            drawPixel(x, y, backgroundColor); //set color before starting recursion
 
-            floodFill4(x + 1, y    , newColor, oldColor, writableImage);
-            floodFill4(x - 1, y    , newColor, oldColor, writableImage);
-            floodFill4(x    , y + 1, newColor, oldColor, writableImage);
-            floodFill4(x    , y - 1, newColor, oldColor, writableImage);
+            floodFill4(x + 1, y, backgroundColor, borderColor);
+            floodFill4(x - 1, y, backgroundColor, borderColor);
+            floodFill4(x, y + 1, backgroundColor, borderColor);
+            floodFill4(x, y - 1, backgroundColor, borderColor);
         }
+    }
+
+    private void drawPixel(int x, int y, Color color) {
+        if (x > 0 && x < MAX_WIDTH && y > 0 && y < MAX_HEIGHT) {
+            pixelWriter.setColor(x, y, color);
+        }
+    }
+
+    private void applyChanges(Image image) {
+        canvas.getGraphicsContext2D().drawImage(image, 0, 0);
     }
 
 }
